@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>聖徒行傳：保羅的旅程 v3</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@500;700&display=swap');
+
+        :root {
+            --bg-color: #2c2c2c;
+            --ui-bg: #4a3b32;
+            --ui-border: #8c7b6c;
+            --text-color: #f0e6d2;
+            --accent: #e6b333;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            background-color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar */
+        #top-ui {
+            padding: 5px 10px;
+            background: #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            border-bottom: 2px solid #444;
+        }
+        
+        .stat-box {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Canvas Area */
+        #canvas-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            background-color: #352b25;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* UI Overlays */
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid var(--ui-border);
+            border-radius: 8px;
+            padding: 20px;
+            display: none;
+            z-index: 100;
+            text-align: center;
+        }
+
+        /* Enhanced Dialog Box */
+        #dialog-box {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: var(--ui-bg);
+            border: 3px double var(--ui-border);
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 80px;
+            display: none;
+            z-index: 50;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            cursor: pointer; /* Indicates clickable */
+            animation: popUp 0.3s ease-out;
+        }
+
+        @keyframes popUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        #dialog-speaker {
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        #dialog-text {
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        #dialog-next {
+            position: absolute;
+            bottom: 10px;
+            right: 15px;
+            font-size: 14px;
+            color: var(--accent);
+            animation: blink 1s infinite;
+        }
+
+        /* Controls Area */
+        #controls-area {
+            height: 220px;
+            background-color: #222;
+            border-top: 2px solid #444;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            padding: 10px;
+            align-items: center;
+        }
+
+        .d-pad {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin: auto;
+        }
+
+        .d-btn {
+            position: absolute;
+            width: 55px;
+            height: 55px;
+            background: linear-gradient(145deg, #444, #333);
+            border-radius: 10px;
+            border: 2px solid #555;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: #ccc;
+            box-shadow: 0 4px 0 #222;
+        }
+        .d-btn:active { transform: translateY(4px); box-shadow: none; background: #555; }
+        
+        #btn-up { top: 0; left: 52px; }
+        #btn-down { bottom: 0; left: 52px; }
+        #btn-left { top: 52px; left: 0; }
+        #btn-right { top: 52px; right: 0; }
+
+        .action-pad {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .action-btn {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            border: 4px solid rgba(0,0,0,0.3);
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.5);
+            text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+        }
+        .action-btn:active { transform: translateY(6px); box-shadow: none; }
+        
+        #btn-a { background: #d32f2f; } /* Red */
+        #btn-b { background: #1976d2; } /* Blue */
+
+        /* Battle UI */
+        #battle-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 90;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .battle-card {
+            background: var(--ui-bg);
+            border: 2px solid var(--accent);
+            padding: 20px;
+            width: 85%;
+            max-width: 320px;
+            border-radius: 10px;
+            color: #fff;
+        }
+
+        .hp-bar-container {
+            background: #333;
+            height: 12px;
+            border-radius: 6px;
+            margin: 5px 0 15px 0;
+            border: 1px solid #555;
+            overflow: hidden;
+        }
+        .hp-fill { height: 100%; transition: width 0.3s; }
+
+        .battle-btn {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            background: #333;
+            border: 1px solid #666;
+            color: #fff;
+            font-size: 14px;
+            text-align: left;
+            border-radius: 4px;
+        }
+        .battle-btn:active { background: #555; }
+        
+        /* Pause/Menu Screen */
+        #pause-screen p {
+            margin: 10px 0;
+            font-size: 14px;
+            border-bottom: 1px dashed #555;
+            padding-bottom: 5px;
+        }
+
+        /* Floating Text Animation */
+        .floating-text {
+            position: absolute;
+            color: #ffff00;
+            font-weight: bold;
+            font-size: 14px;
+            animation: floatUp 1s ease-out forwards;
+            pointer-events: none;
+            text-shadow: 1px 1px 0 #000;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-30px); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="top-ui">
+        <div class="stat-box">LV: <span id="lvl-txt">1</span></div>
+        <div class="stat-box">❤️ 信心: <span id="hp-txt">100</span>%</div>
+        <div class="stat-box">👥 同伴: <span id="party-txt">無</span></div>
+    </div>
+    
+    <div id="canvas-wrapper">
+        <canvas id="gameCanvas" width="320" height="320"></canvas>
+        
+        <!-- Screens -->
+        <div id="intro-screen" class="overlay">
+            <h2 style="color:var(--accent)">保羅的旅程 v3</h2>
+            <div style="font-size:13px; text-align:left; margin:15px 0; line-height:1.6;">
+                <p>🛠️ <b>修復更新：</b></p>
+                <p>- 修復 B 按鈕導致當機的問題</p>
+                <p>- B 鍵現在可打開狀態選單</p>
+                <p>- 點擊對話框可繼續遊戲</p>
+            </div>
+            <button class="battle-btn" style="text-align:center" onclick="startGame()">開始宣教</button>
+        </div>
+
+        <!-- Pause Screen (New) -->
+        <div id="pause-screen" class="overlay">
+            <h2 style="color:var(--accent)">暫停 / 狀態</h2>
+            <div id="pause-stats" style="text-align:left; margin:15px 0;">
+                <!-- Stats injected via JS -->
+            </div>
+            <button class="battle-btn" style="text-align:center" onclick="toggleMenu()">回到遊戲</button>
+        </div>
+
+        <!-- Dialog: Added onclick for better UX -->
+        <div id="dialog-box" onclick="handleInteract()">
+            <div id="dialog-speaker">Speaker Name</div>
+            <div id="dialog-text">Text goes here...</div>
+            <div id="dialog-next">點擊繼續 ▼</div>
+        </div>
+
+        <!-- Battle -->
+        <div id="battle-screen">
+            <div class="battle-card">
+                <div style="display:flex; justify-content:space-between;">
+                    <span id="enemy-name">敵人</span>
+                    <span>固執值</span>
+                </div>
+                <div class="hp-bar-container"><div id="enemy-hp-bar" class="hp-fill" style="background:#f44336; width:100%"></div></div>
+                
+                <div style="display:flex; justify-content:space-between;">
+                    <span>保羅 & <span id="battle-companion">無</span></span>
+                    <span>信心值</span>
+                </div>
+                <div class="hp-bar-container"><div id="player-hp-bar" class="hp-fill" style="background:#4caf50; width:100%"></div></div>
+
+                <div id="battle-menu">
+                    <button class="battle-btn" onclick="battleAction('preach')">📖 引用聖經 (攻擊)</button>
+                    <button class="battle-btn" onclick="battleAction('pray')">🙏 祈禱 (恢復)</button>
+                    <button class="battle-btn" onclick="battleAction('testimony')">🗣️ 個人見證 (大招)</button>
+                </div>
+                <div id="battle-log" style="font-size: 12px; margin-top:10px; color:#ffeb3b; min-height:1.5em; text-align:center;"></div>
+            </div>
+        </div>
+        
+        <div id="level-complete" class="overlay">
+            <h2 style="color: #4caf50">宣教成功!</h2>
+            <p id="level-summary">教會被建立起來了。</p>
+            <button class="battle-btn" style="text-align:center" onclick="nextLevel()">前往下一站</button>
+        </div>
+        
+        <div id="game-over" class="overlay">
+            <h2 style="color: #f44336">信心動搖...</h2>
+            <p>保羅需要安靜禱告重新得力。</p>
+            <button class="battle-btn" style="text-align:center" onclick="location.reload()">重新開始</button>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div id="controls-area">
+        <div class="d-pad">
+            <div class="d-btn" id="btn-up" ontouchstart="movePlayer(0, -1); event.preventDefault();">▲</div>
+            <div class="d-btn" id="btn-left" ontouchstart="movePlayer(-1, 0); event.preventDefault();">◀</div>
+            <div class="d-btn" id="btn-right" ontouchstart="movePlayer(1, 0); event.preventDefault();">▶</div>
+            <div class="d-btn" id="btn-down" ontouchstart="movePlayer(0, 1); event.preventDefault();">▼</div>
+        </div>
+        <div class="action-pad">
+            <!-- A button handles interaction AND dialog -->
+            <div class="action-btn" id="btn-a" onclick="handleInteract()">A</div>
+            <div class="action-btn" id="btn-b" onclick="toggleMenu()">B</div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Game Constants & State
+ */
+const TILE_SIZE = 32;
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let gameState = 'START'; 
+let currentLevelIdx = 0;
+let player = { x: 1, y: 1, faith: 100, maxFaith: 100, lvl: 1, companion: null };
+let entities = []; // Combined list of enemies, npcs, items
+let currentMap = [];
+let exitPos = { x: 0, y: 0 };
+let camera = { x: 0, y: 0 };
+let battleTarget = null;
+let msgQueue = []; // Queue for multiple dialogs
+
+// Enhanced Levels
+const LEVELS = [
+    {
+        name: "第一關：大馬士革",
+        intro: "掃羅眼睛失明，必須在城裡尋找亞拿尼亞。小心心中的懷疑(隱藏敵人)！\n提示：探索地圖尋找卷軸。",
+        // 15x12 Map
+        // P: Player, #: Wall, .: Floor, X: Exit
+        // E: Enemy (Hidden), N: NPC, I: Item
+        mapLayout: [
+            "###############",
+            "#P............#",
+            "#.###.#######.#",
+            "#.#...#.....#.#",
+            "#.#.E.#.###.#.#",
+            "#.#...#.#I#...#",
+            "#.#####.#####.#",
+            "#.............#",
+            "#.###########.#",
+            "#...E.....#...#",
+            "#.#######.#.N.#",
+            "#.......#....X#",
+            "###############"
+        ],
+        entities: [
+            {type: 'enemy', char: 'E', name: "心中的懷疑", hp: 30, hidden: true},
+            {type: 'enemy', char: 'E', name: "恐懼", hp: 25, hidden: true},
+            {type: 'item', char: 'I', name: "舊約卷軸", effect: "buff_atk"},
+            {type: 'npc', char: 'N', name: "亞拿尼亞", msg: "掃羅兄弟，主耶穌打發我來，叫你能看見！(視力恢復)"}
+        ],
+        color: "#c2b280"
+    },
+    {
+        name: "第二關：安提阿",
+        intro: "教會在安提阿興起，但需要工人。去尋找巴拿巴加入隊伍吧！",
+        mapLayout: [
+            "###############",
+            "#X......#....I#",
+            "#######.#.#####",
+            "#.......#.....#",
+            "#.#####.###.E.#",
+            "#.#...#...#...#",
+            "#.#.C.#.E.#####",
+            "#.#...#.......#",
+            "#.###########.#",
+            "#.............#",
+            "#.#####.#####.#",
+            "#P....#.......#",
+            "###############"
+        ],
+        entities: [
+            {type: 'companion', char: 'C', name: "巴拿巴", msg: "保羅，我曾變賣田產跟隨主。讓我們一起同工吧！", perk: "勸慰子"},
+            {type: 'enemy', char: 'E', name: "割禮派信徒", hp: 40, hidden: true},
+            {type: 'enemy', char: 'E', name: "假教師", hp: 35, hidden: true},
+            {type: 'item', char: 'I', name: "無酵餅", effect: "heal"}
+        ],
+        color: "#d2b48c"
+    },
+    {
+        name: "第三關：路司得",
+        intro: "這裡的人要向你獻祭，轉眼又要用石頭打你。這是一場硬仗。",
+        mapLayout: [
+            "###############",
+            "#P....#...E...#",
+            "#.###.#.#####.#",
+            "#...#...#...#.#",
+            "###.#####.I.#.#",
+            "#...E.......#.#",
+            "#.###########.#",
+            "#.............#",
+            "#.#####.#####.#",
+            "#.#...#.#...#.#",
+            "#.#.E.#.#.E.#.#",
+            "#.....#.....#X#",
+            "###############"
+        ],
+        entities: [
+            {type: 'enemy', char: 'E', name: "狂熱群眾", hp: 50, hidden: true},
+            {type: 'enemy', char: 'E', name: "狂熱群眾", hp: 50, hidden: true},
+            {type: 'enemy', char: 'E', name: "猶太激進派", hp: 60, hidden: true},
+            {type: 'item', char: 'I', name: "信心護盾", effect: "buff_def"}
+        ],
+        color: "#cd853f"
+    }
+];
+
+// --- Engine Core ---
+
+function initGame() {
+    // Add click listeners to buttons for mouse users
+    document.getElementById('btn-up').onclick = () => movePlayer(0, -1);
+    document.getElementById('btn-down').onclick = () => movePlayer(0, 1);
+    document.getElementById('btn-left').onclick = () => movePlayer(-1, 0);
+    document.getElementById('btn-right').onclick = () => movePlayer(1, 0);
+    
+    // Keyboard inputs
+    window.addEventListener('keydown', (e) => {
+        if (gameState === 'PLAY') {
+            if (e.key === 'ArrowUp') movePlayer(0, -1);
+            if (e.key === 'ArrowDown') movePlayer(0, 1);
+            if (e.key === 'ArrowLeft') movePlayer(-1, 0);
+            if (e.key === 'ArrowRight') movePlayer(1, 0);
+            if (e.key === 'a' || e.key === 'Enter' || e.key === ' ') handleInteract();
+            if (e.key === 'b' || e.key === 'Escape') toggleMenu();
+        } else if (gameState === 'DIALOG' && (e.key === 'Enter' || e.key === ' ')) {
+            handleInteract();
+        } else if (gameState === 'PAUSE' && (e.key === 'b' || e.key === 'Escape')) {
+            toggleMenu();
+        }
+    });
+
+    document.getElementById('intro-screen').style.display = 'block';
+}
+
+function startGame() {
+    document.getElementById('intro-screen').style.display = 'none';
+    loadLevel(0);
+}
+
+// !!! FIXED FUNCTION HERE !!!
+function toggleMenu() {
+    const screen = document.getElementById('pause-screen');
+    const content = document.getElementById('pause-stats');
+    
+    // Allow toggle only if PLAY or PAUSE
+    if (gameState === 'PLAY') {
+        gameState = 'PAUSE';
+        screen.style.display = 'block';
+        content.innerHTML = `
+            <p>⛪ 等級: ${player.lvl}</p>
+            <p>❤️ 信心: ${player.faith} / ${player.maxFaith}</p>
+            <p>🤝 同伴: ${player.companion || '無'}</p>
+            <p style="font-size:12px; color:#aaa; margin-top:20px; border:none;">
+               提示: 走近黑色區域探索<br>尋找出口 (🚪) 進入下一關
+            </p>
+        `;
+    } else if (gameState === 'PAUSE') {
+        gameState = 'PLAY';
+        screen.style.display = 'none';
+    }
+}
+
+function loadLevel(idx) {
+    if (idx >= LEVELS.length) {
+        alert("恭喜！您已完成目前的宣教旅程！");
+        idx = 0;
+    }
+    currentLevelIdx = idx;
+    const levelData = LEVELS[idx];
+    
+    currentMap = [];
+    entities = [];
+    let enemyQueue = levelData.entities.filter(e => e.type === 'enemy');
+    let npcQueue = levelData.entities.filter(e => e.type === 'npc');
+    let itemQueue = levelData.entities.filter(e => e.type === 'item');
+    let compQueue = levelData.entities.filter(e => e.type === 'companion');
+
+    const rows = levelData.mapLayout;
+    for (let y = 0; y < rows.length; y++) {
+        let row = [];
+        for (let x = 0; x < rows[y].length; x++) {
+            const char = rows[y][x];
+            if (char === '#') row.push(1);
+            else {
+                row.push(0);
+                if (char === 'P') { player.x = x; player.y = y; }
+                else if (char === 'X') { row[row.length-1] = 2; exitPos = {x,y}; }
+                else if (char === 'E' && enemyQueue.length > 0) {
+                    let e = enemyQueue.shift();
+                    entities.push({...e, x, y, active: true, maxHp: e.hp});
+                }
+                else if (char === 'N' && npcQueue.length > 0) {
+                    let n = npcQueue.shift();
+                    entities.push({...n, x, y, active: true});
+                }
+                else if (char === 'I' && itemQueue.length > 0) {
+                    let i = itemQueue.shift();
+                    entities.push({...i, x, y, active: true});
+                }
+                else if (char === 'C' && compQueue.length > 0) {
+                    let c = compQueue.shift();
+                    entities.push({...c, x, y, active: true});
+                }
+            }
+        }
+        currentMap.push(row);
+    }
+
+    showDialog("系統", levelData.intro);
+    gameState = 'PLAY'; // Wait for dialog to close actually handled by showDialog logic if I improved it, but standard flow ok
+    draw();
+}
+
+function movePlayer(dx, dy) {
+    if (gameState !== 'PLAY') return;
+
+    const newX = player.x + dx;
+    const newY = player.y + dy;
+
+    // Boundary & Wall
+    if (newY < 0 || newY >= currentMap.length || newX < 0 || newX >= currentMap[0].length) return;
+    if (currentMap[newY][newX] === 1) return;
+
+    // Entity Collision
+    const entity = entities.find(e => e.x === newX && e.y === newY && e.active);
+    
+    if (entity) {
+        if (entity.type === 'enemy') {
+            startBattle(entity);
+        } else if (entity.type === 'npc') {
+            showDialog(entity.name, entity.msg);
+        } else if (entity.type === 'item') {
+            collectItem(entity);
+        } else if (entity.type === 'companion') {
+            recruitCompanion(entity);
+        }
+        return;
+    }
+
+    player.x = newX;
+    player.y = newY;
+
+    // Exit
+    if (currentMap[newY][newX] === 2) {
+        completeLevel();
+    }
+}
+
+// Interaction Handler
+function handleInteract() {
+    if (gameState === 'DIALOG') {
+        const box = document.getElementById('dialog-box');
+        // Simple close
+        box.style.display = 'none';
+        gameState = 'PLAY';
+    } else if (gameState === 'PLAY') {
+        // Check facing tile for interaction (simplified to current position logic above for now)
+        // Or re-trigger last message?
+    }
+}
+
+function showDialog(name, text) {
+    gameState = 'DIALOG';
+    const box = document.getElementById('dialog-box');
+    document.getElementById('dialog-speaker').innerText = name;
+    document.getElementById('dialog-text').innerText = text;
+    box.style.display = 'block';
+}
+
+function showFloatingText(text, x, y) {
+    // Convert grid to screen coords
+    // Center logic same as draw
+    const mapWidth = currentMap[0].length;
+    const mapHeight = currentMap.length;
+    const offsetX = (canvas.width - mapWidth * TILE_SIZE) / 2;
+    const offsetY = (canvas.height - mapHeight * TILE_SIZE) / 2;
+    
+    const screenX = offsetX + x * TILE_SIZE;
+    const screenY = offsetY + y * TILE_SIZE;
+
+    const div = document.createElement('div');
+    div.className = 'floating-text';
+    div.innerText = text;
+    div.style.left = (screenX + 10) + 'px';
+    div.style.top = screenY + 'px';
+    document.getElementById('canvas-wrapper').appendChild(div);
+    setTimeout(() => div.remove(), 1000);
+}
+
+// --- Features ---
+
+function collectItem(item) {
+    item.active = false;
+    let msg = "";
+    if (item.effect === 'heal') {
+        player.faith = Math.min(player.maxFaith, player.faith + 30);
+        msg = "吃了無酵餅，信心恢復了！";
+    } else if (item.effect === 'buff_atk') {
+        player.lvl++;
+        msg = "研讀舊約卷軸，辯論能力提升！(LV UP)";
+    } else {
+        msg = "獲得了 " + item.name;
+    }
+    showDialog("獲得道具", msg);
+    updateStats();
+}
+
+function recruitCompanion(comp) {
+    comp.active = false;
+    player.companion = comp.name;
+    player.maxFaith += 20;
+    player.faith = player.maxFaith;
+    showDialog(comp.name, comp.msg);
+    updateStats();
+}
+
+function updateStats() {
+    document.getElementById('lvl-txt').innerText = player.lvl;
+    document.getElementById('hp-txt').innerText = player.faith;
+    document.getElementById('party-txt').innerText = player.companion || "無";
+}
+
+// --- Battle ---
+
+function startBattle(enemy) {
+    gameState = 'BATTLE';
+    battleTarget = enemy;
+    document.getElementById('battle-screen').style.display = 'flex';
+    document.getElementById('enemy-name').innerText = enemy.name;
+    document.getElementById('battle-companion').innerText = player.companion || "";
+    updateBattleUI();
+    document.getElementById('battle-log').innerText = "遭遇敵人！";
+}
+
+function updateBattleUI() {
+    const ePct = Math.max(0, (battleTarget.hp / battleTarget.maxHp) * 100);
+    document.getElementById('enemy-hp-bar').style.width = ePct + "%";
+    const pPct = Math.max(0, (player.faith / player.maxFaith) * 100);
+    document.getElementById('player-hp-bar').style.width = pPct + "%";
+}
+
+function battleAction(type) {
+    const log = document.getElementById('battle-log');
+    let dmg = 0;
+    
+    if (type === 'preach') dmg = 10 + (player.lvl * 2);
+    if (type === 'testimony') dmg = 25 + (player.lvl * 3);
+    if (type === 'pray') {
+        player.faith = Math.min(player.maxFaith, player.faith + 25);
+        log.innerText = "保羅禱告，信心恢復了。";
+        updateBattleUI();
+        enemyTurn();
+        return;
+    }
+    
+    // Companion Bonus
+    if (player.companion) dmg += 5;
+
+    battleTarget.hp -= dmg;
+    log.innerText = `你造成了 ${dmg} 點感化值！`;
+    updateBattleUI();
+
+    if (battleTarget.hp <= 0) {
+        setTimeout(() => {
+            document.getElementById('battle-screen').style.display = 'none';
+            battleTarget.active = false;
+            showDialog("戰鬥勝利", `${battleTarget.name} 被真理感化了！`);
+            // Chance to drop item?
+        }, 800);
+    } else {
+        setTimeout(enemyTurn, 800);
+    }
+}
+
+function enemyTurn() {
+    const log = document.getElementById('battle-log');
+    const dmg = Math.floor(Math.random() * 10) + 5;
+    player.faith -= dmg;
+    log.innerText = `敵人反駁！信心受到 ${dmg} 點打擊。`;
+    updateBattleUI();
+    updateStats();
+
+    if (player.faith <= 0) {
+        setTimeout(() => {
+            document.getElementById('battle-screen').style.display = 'none';
+            document.getElementById('game-over').style.display = 'block';
+        }, 1000);
+    }
+}
+
+function completeLevel() {
+    gameState = 'END';
+    document.getElementById('level-complete').style.display = 'block';
+}
+
+function nextLevel() {
+    document.getElementById('level-complete').style.display = 'none';
+    loadLevel(currentLevelIdx + 1);
+}
+
+// --- Draw Loop ---
+
+function draw() {
+    requestAnimationFrame(draw);
+    if (!currentMap.length) return;
+
+    // Clear
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const mapW = currentMap[0].length;
+    const mapH = currentMap.length;
+    
+    // Center Camera
+    const offsetX = Math.floor((canvas.width - mapW * TILE_SIZE) / 2);
+    const offsetY = Math.floor((canvas.height - mapH * TILE_SIZE) / 2);
+
+    for (let y = 0; y < mapH; y++) {
+        for (let x = 0; x < mapW; x++) {
+            const drawX = offsetX + x * TILE_SIZE;
+            const drawY = offsetY + y * TILE_SIZE;
+            
+            // Logic for Hidden Enemies (Fog of War)
+            // Visibility distance = 3
+            const dist = Math.abs(player.x - x) + Math.abs(player.y - y);
+            const isVisible = dist <= 3;
+
+            // Draw Terrain
+            if (currentMap[y][x] === 1) {
+                ctx.fillStyle = isVisible ? "#5d4037" : "#2d1f1b"; // Darker if far
+                ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
+            } else {
+                ctx.fillStyle = isVisible ? LEVELS[currentLevelIdx].color : "#222";
+                ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
+            }
+            
+            // Grid lines
+            ctx.strokeStyle = "rgba(0,0,0,0.1)";
+            ctx.strokeRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
+
+            // Exit
+            if (currentMap[y][x] === 2 && isVisible) {
+                drawEmoji("🚪", drawX, drawY);
+            }
+        }
+    }
+
+    // Draw Entities
+    entities.forEach(e => {
+        if (!e.active) return;
+        
+        // Visibility Check
+        const dist = Math.abs(player.x - e.x) + Math.abs(player.y - e.y);
+        
+        // Items and NPCs are always visible if explored? 
+        // Let's make everything follow fog of war for tension
+        if (dist <= 3) {
+            let emoji = "❓";
+            if (e.type === 'enemy') emoji = "😠";
+            if (e.type === 'npc') emoji = "👳";
+            if (e.type === 'item') emoji = e.name.includes("卷軸") ? "📜" : "🍞";
+            if (e.type === 'companion') emoji = "🤝";
+            
+            // Reveal hidden enemy warning
+            if (e.type === 'enemy' && e.hidden) {
+                // Flash effect or just show
+                // e.hidden = false; // Could permanently reveal
+            }
+            
+            drawEmoji(emoji, offsetX + e.x * TILE_SIZE, offsetY + e.y * TILE_SIZE);
+        }
+    });
+
+    // Draw Player
+    const px = offsetX + player.x * TILE_SIZE;
+    const py = offsetY + player.y * TILE_SIZE;
+    drawEmoji("🧔", px, py);
+    
+    // Light Halo (Visual only)
+    const grad = ctx.createRadialGradient(px+16, py+16, 10, px+16, py+16, 100);
+    grad.addColorStop(0, "rgba(255, 255, 200, 0.1)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(px+16, py+16, 100, 0, Math.PI*2);
+    ctx.fill();
+}
+
+function drawEmoji(char, x, y) {
+    ctx.font = "20px serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(char, x + TILE_SIZE/2, y + TILE_SIZE/2 + 2);
+}
+
+// Start
+initGame();
+
+</script>
+</body>
+</html>
